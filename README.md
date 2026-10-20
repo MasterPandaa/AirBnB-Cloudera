@@ -1,4 +1,4 @@
-# 📊 AirBnB Big Data Analytics - Cloudera Hadoop & MapReduce Pipeline
+# AirBnB Big Data Analytics — Cloudera Hadoop & MapReduce Pipeline
 
 [![Hadoop](https://img.shields.io/badge/Big_Data-Apache_Hadoop_3.x-66CCFF?style=flat&logo=apache-hadoop&logoColor=black)](#)
 [![Platform](https://img.shields.io/badge/Environment-Cloudera_CDH-FF6600?style=flat)](#)
@@ -6,39 +6,41 @@
 [![Dataset](https://img.shields.io/badge/Dataset-74%2C111%20Rows%20(101.55%20MB)-success.svg)](#)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**AirBnB-Cloudera** adalah proyek pemrosesan data terdistribusi (*distributed big data processing*) dan analisis tren harga penginapan pada dataset **AirBnB (74.111 baris data)** menggunakan ekosistem **Cloudera Hadoop** dan paradigma komputasi **MapReduce / HDFS**.
+A distributed big data processing and pricing analytics pipeline executed on the **AirBnB dataset (74,111 records, 101.55 MB)** utilizing **Cloudera CDH**, **HDFS**, and **Hadoop MapReduce Streaming**.
 
-Proyek ini bertujuan mengekstrak wawasan prediktif dan pola korelasi antara tarif sewa listing terhadap fitur properti seperti jumlah kamar tidur (*bedrooms*), kelengkapan fasilitas (*amenities*), tipe akomodasi, dan preferensi wisatawan guna membantu pemilik properti (*hosts*) menentukan strategi penetapan harga yang kompetitif.
-
----
-
-## 🌟 Mengapa Menggunakan Pipeline Ini?
-
-- 📈 **Skalabilitas Pemrosesan Big Data**: Mampu memproses puluhan ribu baris data semi-terstruktur (101.55 MB) secara terdistribusi tanpa kendala memori (*Out-of-Memory*).
-- 💡 **Ekstraksi Tren Nilai Fasilitas (*Amenity Valuation*)**: Mengkuantifikasi dampak fasilitas bernilai tinggi (WiFi, AC, Kolam Renang, Dapur, Parkir) terhadap harga rata-rata listing.
-- 🛏️ **Analisis Segmentasi Kamar Tidur**: Menghitung rata-rata, median, dan distribusi harga per kategori kapasitas kamar (*studio* hingga *multi-bedroom villas*).
-- ⚡ **Desain Mapper-Reducer Efisien**: Memanfaatkan mekanisme *partitioning*, *combiner*, dan agregasi *key-value pairs* yang optimal pada Hadoop Distributed File System (HDFS).
-- 📊 **Dataset Bersih Siap Visualisasi**: Menghasilkan file agregasi ringkas (`price_by_amenity.csv`, `price_by_bedrooms.csv`) yang siap diintegrasikan ke Tableau, PowerBI, atau Python Data Science dashboard.
+This project analyzes rental rate determinants by isolating features such as room counts, property classifications, and amenity sets across US metropolitan markets, producing aggregated data ready for BI dashboards and econometric modeling.
 
 ---
 
-## 🚀 Ringkasan & Spesifikasi Dataset
+## Overview
 
-| Parameter | Spesifikasi |
-|---|---|
-| **Sumber Dataset** | [Kaggle - Airbnb Price Dataset](https://www.kaggle.com/datasets/rupindersinghrana/airbnb-price-dataset) |
-| **Total Rekord Data** | **74.111 baris** |
-| **Jumlah Fitur / Kolom** | **29 atribut** |
-| **Ukuran Berkas Mentah** | **101.55 MB** (`.csv`) |
-| **Atribut Kunci** | `id`, `log_price`, `property_type`, `room_type`, `amenities`, `accommodates`, `bathrooms`, `bed_type`, `cancellation_policy`, `cleaning_fee`, `city`, `host_identity_verified`, `instant_bookable`, `number_of_reviews`, `review_scores_rating`, `zipcode`, `bedrooms`, `beds` |
+Processing high-cardinality multi-feature rental datasets on single-node environments often encounters I/O and memory bottlenecks. This pipeline utilizes Hadoop's distributed computing architecture:
+
+- **HDFS Distributed Storage**: Distributes raw listing records across HDFS blocks, enabling resilient parallel reads.
+- **MapReduce Streaming Paradigm**: Custom Python mappers and reducers parse semi-structured amenity arrays and calculate grouped pricing statistics.
+- **Amenity Valuation Metrics**: Quantifies the price premiums associated with high-demand amenities (High-Speed WiFi, Air Conditioning, Pool, Kitchen, Dedicated Parking).
+- **Bedroom Capacity Segmentation**: Aggregates mean and median pricing tiers from studios to multi-bedroom estates.
+- **Export Artifacts**: Produces clean CSV exports (`price_by_amenity.csv`, `price_by_bedrooms.csv`) for consumption in visualization tools.
 
 ---
 
-## 🛠️ Arsitektur Pipeline MapReduce
+## Dataset Specifications
+
+| Metric | Specification |
+| :--- | :--- |
+| **Source** | [Kaggle - Airbnb Price Dataset](https://www.kaggle.com/datasets/rupindersinghrana/airbnb-price-dataset) |
+| **Record Volume** | 74,111 rows |
+| **Feature Dimensions** | 29 columns |
+| **Raw File Size** | 101.55 MB (`.csv`) |
+| **Key Attributes** | `id`, `log_price`, `property_type`, `room_type`, `amenities`, `accommodates`, `bathrooms`, `bedrooms`, `city`, `review_scores_rating` |
+
+---
+
+## Pipeline Architecture
 
 ```text
 ┌─────────────────────────────────┐
-│     Airbnb_Data.csv (101 MB)    │  Raw Input Dataset di HDFS
+│     Airbnb_Data.csv (101 MB)    │  Raw Input Dataset in HDFS
 └────────────────┬────────────────┘
                  │
                  ▼
@@ -48,102 +50,68 @@ Proyek ini bertujuan mengekstrak wawasan prediktif dan pola korelasi antara tari
                  │
                  ▼
 ┌─────────────────────────────────┐
-│       MAPPER PROCESSING         │  Parsing baris CSV, ekstraksi Key (Kamar/Fasilitas) & Value (Harga)
+│       MAPPER PROCESSING         │  CSV row parsing, Key-Value pair extraction (Bedrooms/Amenities -> Price)
 └────────────────┬────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────┐
-│      SHUFFLE & SORT PHASE       │  Pengelompokan otomatis data berdasarkan Key di cluster Hadoop
+│      SHUFFLE & SORT PHASE       │  Cluster-wide key partitioning and sorting
 └────────────────┬────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────┐
-│       REDUCER AGGREGATION       │  Kalkulasi total frekuensi, rata-rata harga (Mean), & variansi
+│       REDUCER AGGREGATION       │  Statistical calculation (Record count, Average price, Median)
 └────────────────┬────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────┐
-│    OUTPUT CSV AGGREGATIONS      │  price_by_amenity.csv & price_by_bedrooms.csv
+│      OUTPUT CSV ARTIFACTS       │  Aggregated analytics exported from HDFS to local storage
 └─────────────────────────────────┘
 ```
 
 ---
 
-## 💻 Tata Cara Menjalankan di Lingkungan Cloudera
+## Execution Guide (Cloudera CDH)
 
-### 1. Prasyarat Lingkungan
-- **Cloudera QuickStart VM** (CDH 5.x / 6.x) atau cluster **Apache Hadoop 2.x/3.x**.
-- Akses terminal **HDFS** & user permission `cloudera` / `hdfs`.
-- **Python 3.x** / **Hadoop Streaming JAR** (atau Java MapReduce SDK).
+### 1. Ingest Data into HDFS
 
----
-
-### 2. Langkah Eksekusi Pipeline HDFS
-
-#### A. Ingestion Data ke HDFS
 ```bash
-# 1. Buat direktori kerja di HDFS
-hdfs dfs -mkdir -p /user/cloudera/airbnb_project/input
+# Create working directory on HDFS
+hdfs dfs -mkdir -p /user/cloudera/airbnb/input
 
-# 2. Upload dataset mentah ke HDFS
-hdfs dfs -put Airbnb_Data.csv /user/cloudera/airbnb_project/input/
+# Upload dataset to HDFS
+hdfs dfs -put Airbnb_Data.csv /user/cloudera/airbnb/input/
 
-# 3. Verifikasi file telah terunggah dengan aman di HDFS
-hdfs dfs -ls /user/cloudera/airbnb_project/input/
+# Verify upload
+hdfs dfs -ls /user/cloudera/airbnb/input/
 ```
 
----
+### 2. Execute MapReduce Jobs
 
-#### B. Menjalankan MapReduce Job (Hadoop Streaming)
+Run Hadoop Streaming job with custom Python mappers and reducers:
+
 ```bash
-# Menjalankan MapReduce untuk analisis harga berdasarkan jumlah kamar
+# Example: Aggregating price by bedroom count
 hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar \
-    -input /user/cloudera/airbnb_project/input/Airbnb_Data.csv \
-    -output /user/cloudera/airbnb_project/output_bedrooms \
-    -mapper "python mapper_bedrooms.py" \
-    -reducer "python reducer_bedrooms.py" \
-    -file mapper_bedrooms.py \
-    -file reducer_bedrooms.py
+  -files mapper_bedrooms.py,reducer_bedrooms.py \
+  -mapper "python3 mapper_bedrooms.py" \
+  -reducer "python3 reducer_bedrooms.py" \
+  -input /user/cloudera/airbnb/input/Airbnb_Data.csv \
+  -output /user/cloudera/airbnb/output_bedrooms
 ```
 
----
+### 3. Extract Results
 
-#### C. Mengambil Hasil Ekstraksi dari HDFS
 ```bash
-# Meninjau output langsung di HDFS
-hdfs dfs -cat /user/cloudera/airbnb_project/output_bedrooms/part-*
+# Inspect outputs on HDFS
+hdfs dfs -cat /user/cloudera/airbnb/output_bedrooms/part-00000 | head -n 20
 
-# Mengunduh output ke filesystem lokal
-hdfs dfs -getmerge /user/cloudera/airbnb_project/output_bedrooms/ price_by_bedrooms.csv
+# Export to local filesystem
+hdfs dfs -getmerge /user/cloudera/airbnb/output_bedrooms price_by_bedrooms.csv
 ```
 
 ---
 
-## 📊 Hasil Analisis Utama (*Key Findings*)
+## License
 
-### 1. Analisis Harga Berdasarkan Jumlah Kamar Tidur (`price_by_bedrooms.csv`)
-- Listing tipe **Studio / 0-Bedroom** memiliki rentang harga paling stabil dan volume tertinggi di area perkotaan.
-- Terjadi kenaikan eksponensial pada unit dengan **4+ Kamar Tidur**, mencerminkan segmen *luxury villa/vacation rental*.
-
-### 2. Analisis Nilai Fasilitas (*Amenities Impact*) (`price_by_amenity.csv`)
-- Keberadaan fasilitas seperti **Air Conditioning (AC)**, **Hot Tub**, **Free Dedicated Parking**, dan **High-Speed WiFi** memberikan kontribusi positif signifikan terhadap rata-rata harga sewa listing.
-
----
-
-## 📦 Struktur Direktori Proyek
-
-```text
-AirBnB-Cloudera/
-├── Airbnb_Data.csv           # Raw dataset utama Airbnb (74.111 records, 101.55 MB)
-├── About_dataset.txt         # Deskripsi metadata, konteks domain, & referensi Kaggle
-├── price_by_amenity.csv      # Agregasi hasil MapReduce: Korelasi harga per jenis fasilitas
-├── price_by_bedrooms.csv     # Agregasi hasil MapReduce: Distribusi harga per jumlah kamar
-└── README.md                 # Dokumentasi komprehensif arsitektur big data
-```
-
----
-
-## 🔒 Privasi & Lisensi Data
-
-- Dataset bersumber dari repositori publik Kaggle yang telah disanitasi dan dianonimkan (*anonymized*).
-- Seluruh kode pipeline dan skrip analisis dirilis di bawah lisensi [MIT](LICENSE). Bebas digunakan untuk referensi studi komputasi terdistribusi (*distributed computing*), tesis, maupun riset Big Data.
+This project is licensed under the [MIT License](LICENSE).
