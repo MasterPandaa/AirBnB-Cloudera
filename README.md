@@ -1,113 +1,103 @@
-# AirBnB Big Data Analytics — Cloudera Hadoop & MapReduce Pipeline
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MasterPandaa/MasterPandaa/main/assets/banners/AirBnB-Cloudera.svg" alt="AirBnB Cloudera Pipeline Banner" width="100%">
+</p>
 
-[![Hadoop](https://img.shields.io/badge/Big_Data-Apache_Hadoop_3.x-66CCFF?style=flat&logo=apache-hadoop&logoColor=black)](#)
-[![Platform](https://img.shields.io/badge/Environment-Cloudera_CDH-FF6600?style=flat)](#)
-[![Engine](https://img.shields.io/badge/Computing-HDFS%20%7C%20MapReduce-yellow.svg)](#)
-[![Dataset](https://img.shields.io/badge/Dataset-74%2C111%20Rows%20(101.55%20MB)-success.svg)](#)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
-A distributed big data processing and pricing analytics pipeline executed on the **AirBnB dataset (74,111 records, 101.55 MB)** utilizing **Cloudera CDH**, **HDFS**, and **Hadoop MapReduce Streaming**.
-
-This project analyzes rental rate determinants by isolating features such as room counts, property classifications, and amenity sets across US metropolitan markets, producing aggregated data ready for BI dashboards and econometric modeling.
-
----
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Cloudera_Hadoop_CDH-D97706?style=flat-square" alt="Cloudera">
+  <img src="https://img.shields.io/badge/Engine-MapReduce_HDFS-3B82F6?style=flat-square" alt="HDFS">
+  <img src="https://img.shields.io/badge/Dataset-74%2C111_Records-10B981?style=flat-square" alt="Dataset">
+  <img src="https://img.shields.io/badge/Language-Python_3-3776AB?style=flat-square&logo=python" alt="Python">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-gray?style=flat-square" alt="License"></a>
+</p>
 
 ## Overview
 
-Processing high-cardinality multi-feature rental datasets on single-node environments often encounters I/O and memory bottlenecks. This pipeline utilizes Hadoop's distributed computing architecture:
+Analyzing rental market price dynamics across large urban datasets requires distributed batch processing to avoid single-node memory bottlenecks. This project implements an end-to-end distributed data processing pipeline on **Apache Hadoop** and **Cloudera CDH**, crunching 74,111 Airbnb listing records to extract pricing determinants, room-type distributions, and geographic fee variations.
 
-- **HDFS Distributed Storage**: Distributes raw listing records across HDFS blocks, enabling resilient parallel reads.
-- **MapReduce Streaming Paradigm**: Custom Python mappers and reducers parse semi-structured amenity arrays and calculate grouped pricing statistics.
-- **Amenity Valuation Metrics**: Quantifies the price premiums associated with high-demand amenities (High-Speed WiFi, Air Conditioning, Pool, Kitchen, Dedicated Parking).
-- **Bedroom Capacity Segmentation**: Aggregates mean and median pricing tiers from studios to multi-bedroom estates.
-- **Export Artifacts**: Produces clean CSV exports (`price_by_amenity.csv`, `price_by_bedrooms.csv`) for consumption in visualization tools.
+The pipeline stages raw records on the Hadoop Distributed File System (HDFS), runs parallel MapReduce aggregation jobs in Python using Hadoop Streaming, and produces structured analytical summaries for econometric evaluation.
 
 ---
 
-## Dataset Specifications
-
-| Metric | Specification |
-| :--- | :--- |
-| **Source** | [Kaggle - Airbnb Price Dataset](https://www.kaggle.com/datasets/rupindersinghrana/airbnb-price-dataset) |
-| **Record Volume** | 74,111 rows |
-| **Feature Dimensions** | 29 columns |
-| **Raw File Size** | 101.55 MB (`.csv`) |
-| **Key Attributes** | `id`, `log_price`, `property_type`, `room_type`, `amenities`, `accommodates`, `bathrooms`, `bedrooms`, `city`, `review_scores_rating` |
-
----
-
-## Pipeline Architecture
+## Architecture Flow
 
 ```text
-┌─────────────────────────────────┐
-│     Airbnb_Data.csv (101 MB)    │  Raw Input Dataset in HDFS
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│         HDFS INGESTION          │  hdfs dfs -put Airbnb_Data.csv /user/cloudera/airbnb/
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│       MAPPER PROCESSING         │  CSV row parsing, Key-Value pair extraction (Bedrooms/Amenities -> Price)
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│      SHUFFLE & SORT PHASE       │  Cluster-wide key partitioning and sorting
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│       REDUCER AGGREGATION       │  Statistical calculation (Record count, Average price, Median)
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│      OUTPUT CSV ARTIFACTS       │  Aggregated analytics exported from HDFS to local storage
-└─────────────────────────────────┘
+Raw Airbnb CSV (74,111 rows)
+       │
+       ▼
+HDFS Cluster Staging (/user/cloudera/airbnb/input)
+       │
+       ▼
+MapReduce Job 1: Mapper (Key extraction: city, room_type, accommodates)
+       │
+       ▼
+Shuffle and Sort (Distributed grouping across worker nodes)
+       │
+       ▼
+MapReduce Job 2: Reducer (Statistical mean, standard deviation, count)
+       │
+       ▼
+HDFS Export (/user/cloudera/airbnb/output) ──► Pandas Analysis & Tuning
 ```
 
 ---
 
-## Execution Guide (Cloudera CDH)
+## Core Capabilities
 
-### 1. Ingest Data into HDFS
+- **Distributed HDFS Storage**: Ingests multi-megabyte structured rental datasets with replication fault tolerance across Cloudera virtual machine nodes.
+- **Hadoop Streaming Execution**: Executes custom Python mapper and reducer scripts across commodity nodes without Java boilerplate.
+- **Outlier Mitigation**: Filters zero-dollar listings and malformed bathroom records during mapping phases to prevent skewed aggregates.
+- **Price Metric Extraction**: Computes average night rates, cleaning fee ratios, and review-to-price correlations across major metropolitan regions.
 
-```bash
-# Create working directory on HDFS
-hdfs dfs -mkdir -p /user/cloudera/airbnb/input
+---
 
-# Upload dataset to HDFS
-hdfs dfs -put Airbnb_Data.csv /user/cloudera/airbnb/input/
+## Quickstart
 
-# Verify upload
-hdfs dfs -ls /user/cloudera/airbnb/input/
-```
+### Prerequisites
 
-### 2. Execute MapReduce Jobs
+- Cloudera QuickStart VM or Apache Hadoop 2.x/3.x cluster
+- Python 3.6+ on cluster nodes
 
-Run Hadoop Streaming job with custom Python mappers and reducers:
+### Execution Steps
 
-```bash
-# Example: Aggregating price by bedroom count
-hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar \
-  -files mapper_bedrooms.py,reducer_bedrooms.py \
-  -mapper "python3 mapper_bedrooms.py" \
-  -reducer "python3 reducer_bedrooms.py" \
-  -input /user/cloudera/airbnb/input/Airbnb_Data.csv \
-  -output /user/cloudera/airbnb/output_bedrooms
-```
+1. Clone this repository onto the Hadoop edge node:
+   ```bash
+   git clone https://github.com/MasterPandaa/AirBnB-Cloudera.git
+   cd AirBnB-Cloudera
+   ```
 
-### 3. Extract Results
+2. Load the dataset into HDFS:
+   ```bash
+   hdfs dfs -mkdir -p /user/cloudera/airbnb/input
+   hdfs dfs -put dataset/Airbnb_Data.csv /user/cloudera/airbnb/input/
+   ```
 
-```bash
-# Inspect outputs on HDFS
-hdfs dfs -cat /user/cloudera/airbnb/output_bedrooms/part-00000 | head -n 20
+3. Run the MapReduce job via Hadoop Streaming:
+   ```bash
+   hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar \
+     -input /user/cloudera/airbnb/input/Airbnb_Data.csv \
+     -output /user/cloudera/airbnb/output \
+     -mapper mapper.py \
+     -reducer reducer.py \
+     -file mapper.py \
+     -file reducer.py
+   ```
 
-# Export to local filesystem
-hdfs dfs -getmerge /user/cloudera/airbnb/output_bedrooms price_by_bedrooms.csv
+4. Inspect the aggregated results:
+   ```bash
+   hdfs dfs -cat /user/cloudera/airbnb/output/part-00000 | head -n 25
+   ```
+
+---
+
+## Repository Structure
+
+```text
+AirBnB-Cloudera/
+├── dataset/                # Airbnb sample records and schema definitions
+├── mapper.py               # Hadoop streaming mapper script for feature extraction
+├── reducer.py              # Statistical reducer aggregating price metrics
+├── analysis_notebook.ipynb # Exploratory data analysis and regression modeling
+└── README.md               # Pipeline documentation
 ```
 
 ---
